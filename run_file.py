@@ -25,7 +25,7 @@ params['data_load2mem'] = False                # load all data in the memory rig
 params['nb_train_files'] = 20                  # int or 'all'
 params['keras_dformat'] = 'channels_last'              # 'channels_first' for GPU, 'channels_last' for CPU
 params['test_data_portion'] = 0.1              # portion of data to use for testing
-params['trial_run'] = True                     # if True, takes only first 20 % of data from each file (run quickly through code to see how it works)
+params['trial_run'] = False                     # if True, takes only first 20 % of data from each file (run quickly through code to see how it works)
 
 # RESULTS PARAMS
 # params['results_dir'] = '/data/kjarusko/adaGAN_gpu_test/run_g10'
