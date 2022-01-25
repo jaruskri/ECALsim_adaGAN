@@ -9,9 +9,7 @@ import copy
 # from sklearn.utils import shuffle
 
 # from Models_m4_1_ReLU import generator_LeakyReLU
-print('import gan_v6')
 from gan_v6 import *
-print('import datah_v6')
 import data_handler_v6 as datah
 
 # import tensorflow as tf
