@@ -1,5 +1,8 @@
-# ECALsim_adaGAN
-Ensemble of GANs for calorimeter simulation.
+# Conv2Dangle branch (ECALsim_adaGAN)
+
+*** Under development ***
+
+2D conv. GAN for angle data (51x51x25) - baseline for angle ensemble
 
 Tested with:
 - h5py==2.10.0
