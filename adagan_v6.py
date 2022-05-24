@@ -1,5 +1,7 @@
 # AdaGAN class to wrap the ensemble training
 
+from curses import KEY_MARK
+from distutils.ccompiler import new_compiler
 import numpy as np
 # from tensorflow.python.framework.ops import name_scope
 from datetime import datetime
@@ -30,6 +32,8 @@ class Adagan(object):
         self._beta_vec = list()
         self._gens_bestepoch = list()
         self._mixdiscs_bestepoch = list()
+
+        self.gens_list = []
         
         if self._steps_made > 0:
             filename = params['results_dir'] + '/Info/adagan_info.pkl'
@@ -40,8 +44,14 @@ class Adagan(object):
             # Load information about best epochs for GAN and mixdisc, times, bestval, etc.
             self._gens_bestepoch = copy.deepcopy(self.dict_adagan['gan_bestepoch'])
             self._mixdiscs_bestepoch = copy.deepcopy(self.dict_adagan['mixdisc_bestepoch'])
+
+            # THIS IS UPDATED
             # Load beta vectors in the final setup
-            self._beta_vec = copy.deepcopy(self.dict_adagan['beta_vec'][-1])
+            if len(self.dict_adagan['beta_vec'][-1]) > self._steps_made:
+                self._beta_vec = copy.deepcopy(self.dict_adagan['beta_vec'][-2])
+                self.dict_adagan['beta_vec'] = self.dict_adagan['beta_vec'][:-1]
+            else:
+                self._beta_vec = copy.deepcopy(self.dict_adagan['beta_vec'][-1])
         else:
             self.dict_adagan = defaultdict(list)
             self.dict_adagan['params'].append(params)
@@ -106,7 +116,7 @@ class Adagan(object):
                 pickle.dump(data_weights, open(params['results_dir'] + '/DataWeights/dataw_step_{}.pkl'.format(self._steps_made), 'wb'))
                 pickle.dump(indices_train_list, open(params['results_dir'] + '/DataWeights/indices_step_{}.pkl'.format(self._steps_made), 'wb'))
 
-
+            # Train GAN
             with Gan(params) as gan:
                 tick_gan = time.time()
                 logging.info('GAN {} training'.format(step))
@@ -258,9 +268,26 @@ class Adagan(object):
                 print("File: {}/{}".format(file_no+1, nb_files))
                 self.data_obj.load_file(params, file_no)
                 X_train, indices_train, indices_test = self.data_obj.prepare_images_w(params)
-                # preds,_,_ = self.mixdisc.disc(X_train)
-                preds,_,_ = mixdisc.disc(X_train)
+                # predictions in batches
+                batch_size = params['batch_size']
+                num_train = np.shape(X_train)[0]
+                preds = []
+                nb_batches = int(num_train / batch_size)
+                # print('number of training data: {}'.format(np.shape(X_train)))
+                for batch_no in range(nb_batches):
+                    if batch_no == nb_batches-1:
+                        image_batch  = X_train[(batch_no*batch_size) : ]
+                    else:
+                        image_batch  = X_train[(batch_no*batch_size) : ((batch_no+1)*batch_size)]
+                    preds_batch,_,_ = mixdisc.disc(image_batch)
+                    # preds_batch is fp16 or fp32
+                    
+                    preds.extend(preds_batch)
+                # preds,_,_ = mixdisc.disc(X_train)
                 preds = np.array(preds)
+                # what happens in numpy
+
+                # print(np.shape(preds))
                 ratios = (1. - preds) / (preds + 1e-8)
                 ratios_list.append(ratios.tolist())
                 indices_train_list.append(indices_train)
@@ -321,6 +348,7 @@ class Adagan(object):
                     if params['verbose']:
                         progress_bar = tf.keras.utils.Progbar(target=nb_batches)
 
+                    print("MIXDISC training - number of batches: {}".format(nb_batches))
                     # TRAINING IN BATCHES
                     for batch_no in range(nb_batches):
                         if params['verbose']:
@@ -397,7 +425,7 @@ class Adagan(object):
                     f.write("MIXDISC epoch {}:".format(epoch))
                     e = t_epoch
                     f.write('\nTime for Epoch: {:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
-                    f.write("\nValidation Metric: " + str(discriminator_test_loss[0]))
+                    f.write("\nTest loss: " + str(discriminator_test_loss[0]))
                     f.write('-' * 65)
                     f.write("\n\n")
                     f.close()
@@ -499,16 +527,41 @@ class Adagan(object):
             beta_vec = info['beta_vec'][gan_nums-1]
             print('Beta vector: {}'.format(beta_vec))
         # Load generator architectures and best weights
-        gens_list = []
-        for i in range(gan_nums):
-            gens_list.append(Generator(params, arch_overwrite="FloG1"))
-            gens_list[i].load_w_epoch(params, i, self._gens_bestepoch[i])
+        if self.gens_list == []:
+            for i in range(gan_nums):
+                self.gens_list.append(Generator(params, arch_overwrite="FloG1"))
+                self.gens_list[i].load_w_epoch(params, i, self._gens_bestepoch[i])
         if input_Ep is None:
-            sample, aux, ecal = self.generate(params, gens_list, num_samples, all_out=True, beta_replace=beta_vec)
+            sample, aux, ecal = self.generate(params, self.gens_list, num_samples, all_out=True, beta_replace=beta_vec)
             return np.squeeze(sample), aux*100, ecal
         else:
-            sample, ep_shuffeled, _ = self.generate(params, gens_list, num_samples, all_out=False, beta_replace=beta_vec, input_Ep=input_Ep/100)
+            sample, ep_shuffeled, _ = self.generate(params, self.gens_list, num_samples, all_out=False, beta_replace=beta_vec, input_Ep=input_Ep/100)
             sample = np.squeeze(sample) # reshape to (num, xdim, ydim, zdim)
             ecal = np.sum(sample, axis=(1,2,3))
             return sample, ep_shuffeled*100, ecal   # ecal can be calculated afterwards
+
+
+    def load_generators(self, params, gan_nums=None, weights_only=True, path=None):
+        """
+        Function to load generators into the self.gens_list
+        weights_only ... if True, it gets the architecture from the gan_v6.py file and loads weights of the trained model
+                            if False, loads models from .pb file
+        """
+        if gan_nums is None:
+            gan_nums = self._steps_made
+        if weights_only == True:
+            for i in range(gan_nums):
+                self.gens_list.append(Generator(params, arch_overwrite="FloG1"))
+                self.gens_list[i].load_w_epoch(params, i, self._gens_bestepoch[i])
+        else:
+            if path is None:
+                for i in range(gan_nums):
+                    self.gens_list.append(Generator(params, arch_overwrite="FloG1"))
+                    self.gens_list[i].load_pb_epoch(params, i, self._gens_bestepoch[i])
+            else:
+                path = path if isinstance(path, list) else [path]
+                for i in range(len(path)):
+                    self.gens_list.append(Generator(params, arch_overwrite="FloG1"))
+                    self.gens_list[i].load_pb_epoch(params, path=path[i])
+        return
 
