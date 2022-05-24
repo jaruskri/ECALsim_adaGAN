@@ -1,3 +1,7 @@
+##################
+#   Example of the run command:
+#       python run_training.py --nbfiles 5 --nb_epochs 4
+##################
 
 from __future__ import print_function
 from cmath import isnan
