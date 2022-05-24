@@ -1,0 +1,38 @@
+Machine specifications:
+1. (working)
+  GPU: Tesla V100
+  CUDA: release 10.2, V10.2.89
+  Tensorflow: 2.3.0
+  Python: 3.6.8
+  CPU: Intel(R) Xeon(R) Gold 6130 CPU @ 2.10GHz
+
+2. (not working - most likely a problem in Models_dev.py/ecal_angle())
+  GPU: Tesla V100S
+  CUDA: release 11.6, V11.6.124
+  Tensorflow: 2.6.0
+  Python: 3.6.8
+  CPU: Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz
+  
+
+Packages (on machine 1):
+
+h5py==2.10.0
+keras==2.6.0
+matplotlib==3.3.4
+numpy==1.18.5
+optuna==2.10.0
+scikit-learn==0.24.2
+tensorflow==2.3.0
+
+
+Packages (on machine 2):
+
+h5py==3.1.0
+keras==2.6.0
+matplotlib==3.3.4
+numpy==1.19.5
+optuna==2.10.0
+scikit-learn==0.24.2
+tensorflow==2.6.0
+
+
