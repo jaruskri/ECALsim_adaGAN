@@ -28,7 +28,7 @@ def create_resultdir(params, print_outputs=False):  # DONE
         except FileExistsError:
             if print_outputs == True:
                 print("Directory " , dir_name ,  " already exists")
-    print('Output directories created.')
+    print('Output directories set.')
     return
 
 #################################################################################################################################
@@ -651,6 +651,8 @@ def validate_weighted(generator, data_path, data_files_list, data_weights, ind_t
     # del ecal_val
 
     #sess = tf.compat.v1.Session(graph = infer_graph)
+    print('Generating images in analysis')
+
     generated_images = generator.generate(num = num_weighted, generator_input = generator_ip)
     #generated_images = sess.run(l_output, feed_dict = {l_input:generator_ip})
     generated_images= np.squeeze(generated_images)

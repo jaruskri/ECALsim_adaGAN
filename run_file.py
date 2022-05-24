@@ -18,25 +18,26 @@ params = {}
 
 # DATA PARAMS
 params['dataset'] = 'energy'                   # 'energy' or 'angle'
-params['data_dir'] = '/data/kjarusko/DataEnerg/unzipped/'
+# params['data_dir'] = '/data/kjarusko/DataEnerg/unzipped/' #olgpu-01
+params['data_dir'] = '/data/kjarusko/DataEnerg/' #olqti-gpu-04
 # params['data_dir'] = '/eos/home-k/kjarusko/Projects/DataEnerg/unzipped/'   # 20 files
 # params['data_dir'] = '/eos/home-k/kjarusko/Projects/DataEnerg/trial/'  # 3 files only
 params['data_load2mem'] = False                # load all data in the memory right away (if False, loading and processing file by file)
-params['nb_train_files'] = 20                  # int or 'all'
+params['nb_train_files'] = 'all'                  # int or 'all', 20 = 'all' for energ data
 params['keras_dformat'] = 'channels_last'              # 'channels_first' for GPU, 'channels_last' for CPU
 params['test_data_portion'] = 0.1              # portion of data to use for testing
 params['trial_run'] = False                     # if True, takes only first 20 % of data from each file (run quickly through code to see how it works)
 
 # RESULTS PARAMS
 # params['results_dir'] = '/data/kjarusko/adaGAN_gpu_test/run_g10'
-params['results_dir'] = 'run_test_v6'
+params['results_dir'] = 'run_tf26_GAN20'
 
 # ADAGAN PARAMS
 params['is_bagging'] = False                   # True, False
 params['beta_heur'] = 'uniform'                       # 'constant', 'uniform'
 params['beta_constant'] = 0.5 # 
-params['num_generators'] = 5
-params['steps_made'] = 0    # 1
+params['num_generators'] = 20
+params['steps_made'] = 0    # 0
 
 # GAN PARAMS
 params['gen_arch'] = 'FloG1_leaky' # FloG1, FloG1_leaky... - start with LeakyReLU, then switch to ReLU
@@ -44,7 +45,7 @@ params['disc_arch'] = 'Flo_D'
 
 params['lrate_g'] = 0.0005
 params['lrate_d'] = 0.00010     #lr_d should be roughly the same as the ratio from g to d parameters
-params['nb_epochs'] = 20
+params['nb_epochs'] = 30
 params['percent'] = 100         # how much data to use for validation
 
 params['ReLU_epoch'] = 3                # at ReLU_epoch, switch to ReLU architecture - preferable value 3
@@ -59,8 +60,8 @@ params['crit_best'] = 'total'           # total, metricp, metrice
 params['verbose'] = False
 
 # MIXDISC PARAMS
-params['DGAN_epochs'] = 20
-params['DGAN_batch_size'] = 128
+params['DGAN_epochs'] = 30
+# params['DGAN_batch_size'] = 128
  
 
 # doplnit dalsi parametry

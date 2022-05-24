@@ -53,7 +53,7 @@ class DataParent(object):
                 self.num_samples += np.shape(self.X)[0]
             self.data_shape = np.shape(self.X)[1:]
             self.empty_datavars()
-        logging.info('Number od samples in a dataset: {}'.format(self.num_samples))
+        logging.info('Number of samples in a dataset: {}'.format(self.num_samples))
         logging.info('Data shape: {}'.format(self.data_shape))
         return
 

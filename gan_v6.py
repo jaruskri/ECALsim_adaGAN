@@ -18,10 +18,21 @@ from collections import defaultdict
 import gc
 from func_utils_v6 import *
 
-# print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-# gpus = tf.config.list_physical_devices('GPU')
+print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+gpus = tf.config.list_physical_devices('GPU')
+
+if gpus:
+  # Restrict TensorFlow to only use the first GPU
+  try:
+    tf.config.experimental.set_memory_growth(gpus[1], True)
+    tf.config.set_visible_devices(gpus[1], 'GPU')
+    logical_gpus = tf.config.list_logical_devices('GPU')
+    print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPU")
+  except RuntimeError as e:
+    # Visible devices must be set before GPUs have been initialized
+    print(e)
+
 # try:
-#   tf.config.experimental.set_memory_growth(gpus[0], True)
 #   tf.config.experimental.set_memory_growth(gpus[1], True)
 # except:
 #   # Invalid device or cannot modify virtual devices once initialized.
@@ -81,6 +92,13 @@ class Discriminator(object):
 # d_loss = self.disc.train_step(params, lr_d, image_batch, energy_batch, ecal_batch, \
 #                                                     generated_images, gen_aux, gen_ecal)
 
+    def load_w_epoch(self, params, disc_no, e):
+        # dweights = params['results_dir'] + "/Weights/disc/disc_{}/params_discriminator_epoch_{}.hdf5".format(disc_no,e)
+        dweights = params['results_dir'] + "/Weights/disc/disc_{}/params_generator_epoch_{}.hdf5".format(disc_no,e)   # mistake in the file naming - corrected but stays in the old results
+        # print(dweights)
+        self.disc.load_weights(dweights)
+        return
+    
     def train_step(self, params, optimizer_d, image_batch, energy_batch, ecal_batch, image_gen, energy_gen, ecal_gen):
         # optimizer_d = tf.optimizers.Adam(lrate)
 
@@ -294,6 +312,17 @@ class Generator(object):
         self.gen.load_weights(gweights)
         return
 
+    def load_pb_epoch(self, params, gan_no=None, e=None, path=None):
+        if path is None:
+            if gan_no is None or e is None:
+                raise ValueError('gan_no and epoch are not specified.')
+            else:
+                self.gen = tf.keras.models.load_model(os.path.join(params['results_dir'], 'Generators', 'gen_{}_ep_{}'.format(gan_no, e)))
+        else:
+            self.gen = tf.keras.models.load_model(path)
+            # self.gen = tf.keras.models.load_model(os.path.join(path, 'gen_{}'.format(gan_no), 'gen_{}_ep_{}'.format(gan_no, e)))
+        return
+
 
     def generate(self, num=None, epoch=10, batch_size=128, generator_input = None, latent=200):
         """ Generate samples
@@ -346,7 +375,7 @@ class Generator(object):
                 generated_batch = self.gen(input_batch)
                 generated_images = tf.concat([generated_images, generated_batch], 0)
             elif not(num_residual == 0) and nb_batches == 0:
-                generated_images = self.gen(input_batch)
+                generated_images = self.gen(generator_input)
             return generated_images
 
 
@@ -720,6 +749,7 @@ class Gan(object):
                     progress_bar = tf.keras.utils.Progbar(target=nb_batches)
 
                 # TRAINING IN BATCHES
+                print("GAN training - number of batches: {}".format(nb_batches))
                 for batch_no in range(nb_batches):
                     if params['verbose']:
                         progress_bar.update(batch_no+1)
@@ -747,7 +777,6 @@ class Gan(object):
 
                     d_loss = self.disc.train_step(params, optimizer_d, image_batch, energy_batch, ecal_batch, \
                                                     generated_images, gen_aux, gen_ecal)
-
                     epoch_disc_loss.append(d_loss)  
 
                     g_loss = self.gen.train_step(params, optimizer_g, batch_size, epoch, self.disc)
@@ -830,7 +859,7 @@ class Gan(object):
 
             # Save weights
             self.gen.gen.save_weights(params['results_dir']+"/Weights/gen/gen_{}/params_generator_epoch_{}.hdf5".format(gan_no, epoch),overwrite=True)
-            self.disc.disc.save_weights(params['results_dir']+"/Weights/disc/disc_{}/params_generator_epoch_{}.hdf5".format(gan_no, epoch),overwrite=True)
+            self.disc.disc.save_weights(params['results_dir']+"/Weights/disc/disc_{}/params_discriminator_epoch_{}.hdf5".format(gan_no, epoch),overwrite=True)
 
             # Print loss table
             loss_table(params, train_history, test_history, params['results_dir'], epoch, validation_metric[2], save=True, time4epoch = t_epoch)  
